@@ -1,0 +1,1221 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>空调需求看板 · 在线编辑版</title>
+    <style>
+        :root {
+            --bg: #f0f4f8;
+            --card-bg: #ffffff;
+            --primary: #1a4d8c;
+            --accent: #c7442e;
+            --accent2: #e07b39;
+            --editable-bg: #fffef5;
+            --editable-border: #f0c040;
+            --editable-focus: #ffeaa7;
+            --row-edit-bg: #fffdf0;
+            --text: #2d3e5f;
+            --text-light: #5a6c85;
+            --border: #e2e8f0;
+            --shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.10);
+            --radius: 18px;
+            --radius-sm: 10px;
+            --transition: 0.2s ease;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Roboto', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: var(--bg);
+            margin: 0;
+            padding: 16px;
+            color: var(--text);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .dashboard {
+            max-width: 1360px;
+            margin: 0 auto;
+            background: var(--card-bg);
+            border-radius: 24px;
+            box-shadow: var(--shadow-lg);
+            padding: 28px 32px 20px;
+        }
+
+        /* ----- 头部 ----- */
+        .header {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+        .header h1 {
+            font-size: 1.7rem;
+            color: var(--primary);
+            margin: 0;
+            letter-spacing: -0.3px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .header h1 .icon {
+            font-size: 2rem;
+        }
+        .badge {
+            display: inline-block;
+            background: #e8f0fe;
+            color: var(--primary);
+            font-size: 0.8rem;
+            font-weight: 600;
+            padding: 6px 14px;
+            border-radius: 20px;
+            letter-spacing: 0.3px;
+            white-space: nowrap;
+        }
+        .badge.live {
+            background: #fef3e4;
+            color: #b85c1a;
+            animation: pulse-dot 2s infinite;
+        }
+        @keyframes pulse-dot {
+            0%,
+            100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.55;
+            }
+        }
+
+        /* ----- 卡片 ----- */
+        .cards {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 18px;
+            margin: 18px 0 22px;
+        }
+        .card {
+            flex: 1;
+            min-width: 180px;
+            background: #fafcfd;
+            border-radius: var(--radius);
+            padding: 18px 16px 14px;
+            text-align: center;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+            position: relative;
+        }
+        .card:hover {
+            box-shadow: 0 4px 18px rgba(0, 0, 0, 0.10);
+            transform: translateY(-1px);
+        }
+        .card h3 {
+            margin: 0 0 6px;
+            font-size: 0.9rem;
+            color: var(--text-light);
+            font-weight: 500;
+            letter-spacing: 0.2px;
+        }
+        .card .value {
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--accent);
+            letter-spacing: -0.5px;
+            line-height: 1.1;
+        }
+        .card .value.small {
+            font-size: 1.4rem;
+            color: #3a6da5;
+        }
+        .card .sub {
+            font-size: 0.78rem;
+            color: var(--text-light);
+            margin-top: 4px;
+        }
+        .card .r2 {
+            font-size: 0.75rem;
+            color: #7d8fa3;
+            margin-top: 2px;
+            font-style: italic;
+        }
+
+        /* ----- 提示条 ----- */
+        .note {
+            background: #fffdf5;
+            border-left: 5px solid #f5b042;
+            padding: 12px 18px;
+            border-radius: var(--radius-sm);
+            margin: 18px 0 22px;
+            font-size: 0.88rem;
+            color: #6b5a30;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            line-height: 1.5;
+        }
+        .note .note-icon {
+            font-size: 1.3rem;
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+        .note strong {
+            color: #b85c1a;
+        }
+        .note .highlight-edit {
+            background: #fef9e7;
+            border: 1px dashed #e0b840;
+            border-radius: 4px;
+            padding: 2px 8px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        /* ----- 图表行 ----- */
+        .chart-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 22px;
+            margin: 26px 0;
+        }
+        .chart-box {
+            flex: 1;
+            min-width: 300px;
+            background: #fefefe;
+            border-radius: var(--radius);
+            padding: 14px 12px 8px;
+            box-shadow: var(--shadow);
+            border: 1px solid #eef1f5;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .chart-box h3 {
+            text-align: center;
+            margin: 0 0 6px;
+            color: var(--primary);
+            font-size: 0.95rem;
+            font-weight: 600;
+        }
+        canvas {
+            width: 100%;
+            max-width: 520px;
+            height: auto;
+            background: #fff;
+            border-radius: var(--radius-sm);
+            display: block;
+        }
+
+        /* ----- 表格 ----- */
+        .table-section {
+            margin-top: 20px;
+        }
+        .table-section h3 {
+            color: var(--primary);
+            font-size: 1.05rem;
+            margin-bottom: 10px;
+        }
+        .table-wrap {
+            overflow-x: auto;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.88rem;
+            min-width: 700px;
+            white-space: nowrap;
+        }
+        th {
+            background: #1e466e;
+            color: #fff;
+            padding: 11px 10px;
+            font-weight: 600;
+            font-size: 0.82rem;
+            letter-spacing: 0.3px;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+        td {
+            border: 1px solid #e4eaf1;
+            padding: 9px 8px;
+            text-align: center;
+            transition: var(--transition);
+            vertical-align: middle;
+        }
+        tr:nth-child(even) td {
+            background: #fafcfd;
+        }
+        tr.row-editable td {
+            background: var(--row-edit-bg);
+        }
+        tr.row-editable td:first-child {
+            position: relative;
+        }
+        tr.row-editable td:first-child::before {
+            content: '✎';
+            position: absolute;
+            left: 6px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 0.7rem;
+            color: #c7943c;
+            opacity: 0.8;
+        }
+        .tag-edit {
+            display: inline-block;
+            background: #fef3d5;
+            color: #8b6914;
+            font-size: 0.68rem;
+            font-weight: 700;
+            padding: 3px 9px;
+            border-radius: 12px;
+            letter-spacing: 0.3px;
+            margin-left: 4px;
+        }
+
+        /* ----- 输入框 ----- */
+        input.cell-input {
+            width: 100%;
+            max-width: 110px;
+            padding: 7px 8px;
+            border: 2px dashed var(--editable-border);
+            border-radius: 7px;
+            text-align: center;
+            font-size: 0.88rem;
+            font-weight: 500;
+            font-family: inherit;
+            background: #fffef9;
+            color: #3d3d3d;
+            transition: all var(--transition);
+            outline: none;
+            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.03);
+            letter-spacing: 0.2px;
+        }
+        input.cell-input:hover {
+            border-color: #d4a020;
+            background: #fffef5;
+            box-shadow: 0 0 0 4px rgba(240, 192, 64, 0.08);
+        }
+        input.cell-input:focus {
+            border-color: #e07b39;
+            border-style: solid;
+            background: #fffefb;
+            box-shadow: 0 0 0 7px rgba(224, 123, 57, 0.10);
+            color: #1a1a1a;
+        }
+        input.cell-input::placeholder {
+            color: #c5bdb0;
+            font-style: italic;
+            font-weight: 400;
+            font-size: 0.8rem;
+        }
+        input.cell-input.input-sales {
+            max-width: 100px;
+            font-weight: 600;
+        }
+        input.cell-input.input-temp {
+            max-width: 85px;
+        }
+        input.cell-input.input-thi {
+            max-width: 100px;
+            font-family: 'SF Mono', 'Consolas', 'Menlo', monospace;
+            font-size: 0.82rem;
+        }
+
+        /* ----- 页脚 ----- */
+        .footer {
+            text-align: center;
+            font-size: 0.73rem;
+            color: #8c98ab;
+            margin-top: 26px;
+            border-top: 1px solid #eaf0f5;
+            padding-top: 16px;
+            letter-spacing: 0.2px;
+        }
+        .footer span {
+            margin: 0 8px;
+        }
+
+        /* ----- 响应式 ----- */
+        @media (max-width: 768px) {
+            .dashboard {
+                padding: 16px 12px;
+                border-radius: 16px;
+            }
+            .header h1 {
+                font-size: 1.3rem;
+            }
+            .card .value {
+                font-size: 1.5rem;
+            }
+            .chart-box {
+                min-width: 240px;
+                padding: 8px 4px;
+            }
+            canvas {
+                max-width: 100%;
+            }
+            input.cell-input {
+                max-width: 75px;
+                font-size: 0.78rem;
+                padding: 5px 4px;
+            }
+            input.cell-input.input-sales {
+                max-width: 70px;
+            }
+            input.cell-input.input-temp {
+                max-width: 60px;
+            }
+            input.cell-input.input-thi {
+                max-width: 72px;
+                font-size: 0.7rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <!-- ===== 头部 ===== -->
+        <div class="header">
+            <h1>
+                <span class="icon">❄️</span> 空调需求 · 气温 & THI 影响看板
+            </h1>
+            <span class="badge live">● 实时计算中</span>
+        </div>
+
+        <!-- ===== 弹性系数卡片 ===== -->
+        <div class="cards">
+            <div class="card" id="cardTemp">
+                <h3>🌡️ 温度弹性</h3>
+                <div class="value" id="valTempElastic">—</div>
+                <div class="sub">每升温 1°C 销量增加</div>
+                <div class="r2" id="r2Temp">R² = —</div>
+            </div>
+            <div class="card" id="cardThi">
+                <h3>💧 THI 弹性</h3>
+                <div class="value" id="valThiElastic">—</div>
+                <div class="sub">THI 每 +1 销量增加</div>
+                <div class="r2" id="r2Thi">R² = —</div>
+            </div>
+            <div class="card" id="cardInfo">
+                <h3>📊 有效数据点</h3>
+                <div class="value small" id="valDataPoints">9 个</div>
+                <div class="sub">用于回归计算</div>
+                <div class="r2">2024–2026 年 5–8 月</div>
+            </div>
+        </div>
+
+        <!-- ===== 提示条 ===== -->
+        <div class="note">
+            <span class="note-icon">📌</span>
+            <div>
+                <strong>请在下方表格中填写 <span class="highlight-edit">2026年6月、7月、8月</span> 的销量、平均最高温、THI 数据。</strong><br>
+                填写后，弹性系数与所有图表将<strong>自动实时更新</strong>。其余年份数据为历史数据，不可编辑。
+            </div>
+        </div>
+
+        <!-- ===== 图表区域 ===== -->
+        <div class="chart-row">
+            <div class="chart-box">
+                <h3>📈 同期销量对比 (5–8月)</h3>
+                <canvas id="lineChart"></canvas>
+            </div>
+            <div class="chart-box">
+                <h3>🌡️ 温度 vs 销量 (含回归线)</h3>
+                <canvas id="scatterTempChart"></canvas>
+            </div>
+            <div class="chart-box">
+                <h3>💧 THI vs 销量 (含回归线)</h3>
+                <canvas id="scatterThiChart"></canvas>
+            </div>
+        </div>
+
+        <!-- ===== 数据表格 ===== -->
+        <div class="table-section">
+            <h3>📋 历史数据 & <span style="color:#b85c1a;">可编辑区域</span></h3>
+            <div class="table-wrap">
+                <table id="dataTable">
+                    <thead>
+                        <tr>
+                            <th>年份</th>
+                            <th>月份</th>
+                            <th>销量 (台)</th>
+                            <th>平均最高温 (°C)</th>
+                            <th>THI (温湿指数)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ===== 页脚 ===== -->
+        <div class="footer">
+            <span>📐 回归方法：普通最小二乘法 (OLS)</span>
+            <span>|</span>
+            <span>🎯 图表使用 Canvas 原生绘制</span>
+            <span>|</span>
+            <span>✅ 纯前端 · 无需网络</span>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            // ============ 数据定义 ============
+            // 2024-2025年5-8月 + 2026年5月为历史数据（只读）
+            // 2026年6-8月为可编辑数据（初始为null）
+            const rows = [
+                { year: 2024, month: 5, sales: 22631, temp: 18.2, thi: 16.179, editable: false },
+                { year: 2024, month: 6, sales: 51279, temp: 21.2, thi: 17.541, editable: false },
+                { year: 2024, month: 7, sales: 106759, temp: 23.6, thi: 18.630, editable: false },
+                { year: 2024, month: 8, sales: 50939, temp: 24.6, thi: 19.084, editable: false },
+                { year: 2025, month: 5, sales: 32153, temp: 18.3, thi: 16.225, editable: false },
+                { year: 2025, month: 6, sales: 74393, temp: 23.6, thi: 18.630, editable: false },
+                { year: 2025, month: 7, sales: 85577, temp: 23.6, thi: 18.630, editable: false },
+                { year: 2025, month: 8, sales: 24878, temp: 24.4, thi: 18.993, editable: false },
+                { year: 2026, month: 5, sales: 45968, temp: 18.0, thi: 16.088, editable: false },
+                { year: 2026, month: 6, sales: null, temp: null, thi: null, editable: true },
+                { year: 2026, month: 7, sales: null, temp: null, thi: null, editable: true },
+                { year: 2026, month: 8, sales: null, temp: null, thi: null, editable: true },
+            ];
+
+            // ============ 工具函数：线性回归 ============
+            function linearRegression(xArr, yArr) {
+                const n = xArr.length;
+                if (n < 2) return { slope: 0, intercept: 0, r2: 0, n: 0 };
+                let sumX = 0,
+                    sumY = 0,
+                    sumXY = 0,
+                    sumX2 = 0,
+                    sumY2 = 0;
+                for (let i = 0; i < n; i++) {
+                    const x = xArr[i];
+                    const y = yArr[i];
+                    sumX += x;
+                    sumY += y;
+                    sumXY += x * y;
+                    sumX2 += x * x;
+                    sumY2 += y * y;
+                }
+                const denom = n * sumX2 - sumX * sumX;
+                let slope = 0;
+                let intercept = 0;
+                if (Math.abs(denom) > 1e-12) {
+                    slope = (n * sumXY - sumX * sumY) / denom;
+                    intercept = (sumY - slope * sumX) / n;
+                } else {
+                    intercept = sumY / n;
+                }
+                // R²
+                const meanY = sumY / n;
+                let ssTot = 0,
+                    ssRes = 0;
+                for (let i = 0; i < n; i++) {
+                    const yPred = slope * xArr[i] + intercept;
+                    ssTot += (yArr[i] - meanY) ** 2;
+                    ssRes += (yArr[i] - yPred) ** 2;
+                }
+                const r2 = ssTot > 1e-12 ? Math.max(0, Math.min(1, 1 - ssRes / ssTot)) : 0;
+                return { slope, intercept, r2, n };
+            }
+
+            // ============ 获取有效数据对 ============
+            function getValidTempSales() {
+                const temps = [];
+                const sales = [];
+                rows.forEach(r => {
+                    if (r.sales !== null && r.temp !== null && !isNaN(r.sales) && !isNaN(r.temp)) {
+                        temps.push(r.temp);
+                        sales.push(r.sales);
+                    }
+                });
+                return { temps, sales };
+            }
+
+            function getValidThiSales() {
+                const thisArr = [];
+                const sales = [];
+                rows.forEach(r => {
+                    if (r.sales !== null && r.thi !== null && !isNaN(r.sales) && !isNaN(r.thi)) {
+                        thisArr.push(r.thi);
+                        sales.push(r.sales);
+                    }
+                });
+                return { thisArr, sales };
+            }
+
+            // ============ 从输入框同步2026年6-8月数据到rows ============
+            function syncEditableData() {
+                const editableRows = rows.filter(r => r.editable);
+                editableRows.forEach(r => {
+                    const sid = 'sales_' + r.year + '_' + r.month;
+                    const tid = 'temp_' + r.year + '_' + r.month;
+                    const hid = 'thi_' + r.year + '_' + r.month;
+                    const salesEl = document.getElementById(sid);
+                    const tempEl = document.getElementById(tid);
+                    const thiEl = document.getElementById(hid);
+                    if (salesEl) {
+                        const val = parseFloat(salesEl.value);
+                        r.sales = (!isNaN(val) && salesEl.value.trim() !== '') ? val : null;
+                    }
+                    if (tempEl) {
+                        const val = parseFloat(tempEl.value);
+                        r.temp = (!isNaN(val) && tempEl.value.trim() !== '') ? val : null;
+                    }
+                    if (thiEl) {
+                        const val = parseFloat(thiEl.value);
+                        r.thi = (!isNaN(val) && thiEl.value.trim() !== '') ? val : null;
+                    }
+                });
+            }
+
+            // ============ 更新卡片 ============
+            function updateCards() {
+                const { temps, sales: salesTemp } = getValidTempSales();
+                const { thisArr, sales: salesThi } = getValidThiSales();
+
+                const regTemp = linearRegression(temps, salesTemp);
+                const regThi = linearRegression(thisArr, salesThi);
+
+                // 温度弹性
+                const valTempEl = document.getElementById('valTempElastic');
+                const r2Temp = document.getElementById('r2Temp');
+                if (regTemp.n >= 2) {
+                    valTempEl.textContent = '+' + Math.round(regTemp.slope).toLocaleString() + ' 台/°C';
+                    r2Temp.textContent = 'R² = ' + (regTemp.r2 * 100).toFixed(1) + '% · n=' + regTemp.n;
+                } else {
+                    valTempEl.textContent = '数据不足';
+                    r2Temp.textContent = '需要至少2个有效数据点';
+                }
+
+                // THI弹性
+                const valThiEl = document.getElementById('valThiElastic');
+                const r2Thi = document.getElementById('r2Thi');
+                if (regThi.n >= 2) {
+                    valThiEl.textContent = '+' + Math.round(regThi.slope).toLocaleString() + ' 台/THI';
+                    r2Thi.textContent = 'R² = ' + (regThi.r2 * 100).toFixed(1) + '% · n=' + regThi.n;
+                } else {
+                    valThiEl.textContent = '数据不足';
+                    r2Thi.textContent = '需要至少2个有效数据点';
+                }
+
+                // 有效数据点
+                const totalValid = rows.filter(r => r.sales !== null && !isNaN(r.sales)).length;
+                document.getElementById('valDataPoints').textContent = totalValid + ' 个';
+            }
+
+            // ============ 渲染表格 ============
+            function renderTable() {
+                const tbody = document.getElementById('tableBody');
+                tbody.innerHTML = '';
+                rows.forEach(r => {
+                    const tr = document.createElement('tr');
+                    if (r.editable) {
+                        tr.classList.add('row-editable');
+                    }
+                    // 年份
+                    const tdYear = document.createElement('td');
+                    tdYear.textContent = r.year;
+                    if (r.editable) {
+                        const tag = document.createElement('span');
+                        tag.className = 'tag-edit';
+                        tag.textContent = '可编辑';
+                        tdYear.appendChild(document.createTextNode(' '));
+                        tdYear.appendChild(tag);
+                    }
+                    tr.appendChild(tdYear);
+
+                    // 月份
+                    const tdMonth = document.createElement('td');
+                    tdMonth.textContent = r.month + '月';
+                    tr.appendChild(tdMonth);
+
+                    // 销量
+                    const tdSales = document.createElement('td');
+                    if (r.editable) {
+                        const input = document.createElement('input');
+                        input.type = 'number';
+                        input.id = 'sales_' + r.year + '_' + r.month;
+                        input.className = 'cell-input input-sales';
+                        input.placeholder = '请输入销量';
+                        input.step = '1';
+                        input.min = '0';
+                        if (r.sales !== null) input.value = r.sales;
+                        input.addEventListener('input', onDataChange);
+                        input.addEventListener('change', onDataChange);
+                        tdSales.appendChild(input);
+                    } else {
+                        tdSales.textContent = r.sales !== null ? r.sales.toLocaleString() : '—';
+                    }
+                    tr.appendChild(tdSales);
+
+                    // 温度
+                    const tdTemp = document.createElement('td');
+                    if (r.editable) {
+                        const input = document.createElement('input');
+                        input.type = 'number';
+                        input.id = 'temp_' + r.year + '_' + r.month;
+                        input.className = 'cell-input input-temp';
+                        input.placeholder = '如 24.5';
+                        input.step = '0.1';
+                        input.min = '0';
+                        input.max = '55';
+                        if (r.temp !== null) input.value = r.temp;
+                        input.addEventListener('input', onDataChange);
+                        input.addEventListener('change', onDataChange);
+                        tdTemp.appendChild(input);
+                    } else {
+                        tdTemp.textContent = r.temp !== null ? r.temp.toFixed(1) : '—';
+                    }
+                    tr.appendChild(tdTemp);
+
+                    // THI
+                    const tdThi = document.createElement('td');
+                    if (r.editable) {
+                        const input = document.createElement('input');
+                        input.type = 'number';
+                        input.id = 'thi_' + r.year + '_' + r.month;
+                        input.className = 'cell-input input-thi';
+                        input.placeholder = '如 19.500';
+                        input.step = '0.001';
+                        input.min = '0';
+                        input.max = '40';
+                        if (r.thi !== null) input.value = r.thi;
+                        input.addEventListener('input', onDataChange);
+                        input.addEventListener('change', onDataChange);
+                        tdThi.appendChild(input);
+                    } else {
+                        tdThi.textContent = r.thi !== null ? r.thi.toFixed(3) : '—';
+                    }
+                    tr.appendChild(tdThi);
+
+                    tbody.appendChild(tr);
+                });
+            }
+
+            // ============ 数据变更回调（防抖） ============
+            let refreshTimeout = null;
+
+            function onDataChange() {
+                if (refreshTimeout) clearTimeout(refreshTimeout);
+                refreshTimeout = setTimeout(() => {
+                    syncEditableData();
+                    updateCards();
+                    drawAllCharts();
+                }, 150);
+            }
+
+            // ============ 立即刷新所有 ============
+            function refreshAll() {
+                syncEditableData();
+                updateCards();
+                drawAllCharts();
+            }
+
+            // ============ 绘制折线图 ============
+            function drawLineChart() {
+                const canvas = document.getElementById('lineChart');
+                if (!canvas) return;
+                const w = canvas.clientWidth || 500;
+                const h = canvas.clientHeight || 300;
+                const dpr = window.devicePixelRatio || 1;
+                canvas.width = w * dpr;
+                canvas.height = h * dpr;
+                const ctx = canvas.getContext('2d');
+                ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+                ctx.clearRect(0, 0, w, h);
+
+                const months = ['5月', '6月', '7月', '8月'];
+                const padL = 55,
+                    padR = 45,
+                    padT = 35,
+                    padB = 30;
+                const plotW = w - padL - padR;
+                const plotH = h - padT - padB;
+
+                // 收集各年数据
+                const getYearSales = (yr) => {
+                    return rows
+                        .filter(r => r.year === yr && r.month >= 5 && r.month <= 8)
+                        .sort((a, b) => a.month - b.month)
+                        .map(r => r.sales);
+                };
+                const s2024 = getYearSales(2024);
+                const s2025 = getYearSales(2025);
+                const s2026 = getYearSales(2026);
+
+                const allValid = [...s2024, ...s2025, ...s2026].filter(v => v !== null && !isNaN(v));
+                const maxSales = allValid.length > 0 ? Math.max(...allValid, 10000) : 110000;
+                const yMax = Math.ceil(maxSales / 10000) * 10000 + 10000;
+                const xStep = plotW / 3;
+
+                // 网格
+                ctx.strokeStyle = '#e8ecf1';
+                ctx.lineWidth = 0.6;
+                const gridLines = 5;
+                for (let i = 0; i <= gridLines; i++) {
+                    const y = padT + (plotH / gridLines) * i;
+                    ctx.beginPath();
+                    ctx.moveTo(padL, y);
+                    ctx.lineTo(w - padR, y);
+                    ctx.stroke();
+                    const val = yMax * (1 - i / gridLines);
+                    ctx.fillStyle = '#5a6c85';
+                    ctx.font = '10px "Segoe UI","PingFang SC",sans-serif';
+                    ctx.textAlign = 'right';
+                    ctx.fillText(Math.round(val).toLocaleString(), padL - 6, y + 4);
+                }
+                // 轴线
+                ctx.strokeStyle = '#bcc5d0';
+                ctx.lineWidth = 1.2;
+                ctx.beginPath();
+                ctx.moveTo(padL, padT);
+                ctx.lineTo(padL, h - padB);
+                ctx.lineTo(w - padR, h - padB);
+                ctx.stroke();
+                // X轴标签
+                ctx.fillStyle = '#3d4f65';
+                ctx.font = '11px "Segoe UI","PingFang SC",sans-serif';
+                ctx.textAlign = 'center';
+                for (let i = 0; i < 4; i++) {
+                    ctx.fillText(months[i], padL + i * xStep, h - padB + 16);
+                }
+
+                // 绘制年份折线
+                const colors = { 2024: '#2c6e9e', 2025: '#e88d4d', 2026: '#8e44ad' };
+                const labels = { 2024: '2024', 2025: '2025', 2026: '2026' };
+                const allSeries = [
+                    { yr: 2024, data: s2024 },
+                    { yr: 2025, data: s2025 },
+                    { yr: 2026, data: s2026 },
+                ];
+
+                allSeries.forEach(series => {
+                    const pts = [];
+                    for (let i = 0; i < series.data.length; i++) {
+                        if (series.data[i] === null || isNaN(series.data[i])) continue;
+                        const x = padL + i * xStep;
+                        const y = h - padB - (series.data[i] / yMax) * plotH;
+                        pts.push({ x, y, val: series.data[i] });
+                    }
+                    if (pts.length === 0) return;
+                    const color = colors[series.yr];
+                    // 连线
+                    if (pts.length >= 2) {
+                        ctx.beginPath();
+                        ctx.moveTo(pts[0].x, pts[0].y);
+                        for (let i = 1; i < pts.length; i++) {
+                            ctx.lineTo(pts[i].x, pts[i].y);
+                        }
+                        ctx.strokeStyle = color;
+                        ctx.lineWidth = 2.5;
+                        ctx.lineJoin = 'round';
+                        ctx.lineCap = 'round';
+                        ctx.setLineDash([]);
+                        ctx.stroke();
+                    }
+                    // 数据点
+                    pts.forEach(p => {
+                        ctx.beginPath();
+                        ctx.arc(p.x, p.y, 5.5, 0, 2 * Math.PI);
+                        ctx.fillStyle = '#fff';
+                        ctx.fill();
+                        ctx.strokeStyle = color;
+                        ctx.lineWidth = 2.5;
+                        ctx.stroke();
+                        ctx.beginPath();
+                        ctx.arc(p.x, p.y, 2.8, 0, 2 * Math.PI);
+                        ctx.fillStyle = color;
+                        ctx.fill();
+                    });
+                });
+
+                // 图例
+                const lx = w - padR - 130;
+                const ly = padT - 10;
+                allSeries.forEach((series, idx) => {
+                    const yOff = ly + idx * 22;
+                    ctx.fillStyle = colors[series.yr];
+                    ctx.fillRect(lx, yOff, 14, 14);
+                    ctx.fillStyle = '#333';
+                    ctx.font = 'bold 11px "Segoe UI","PingFang SC",sans-serif';
+                    ctx.textAlign = 'left';
+                    ctx.fillText(labels[series.yr], lx + 20, yOff + 11);
+                });
+
+                // Y轴标题
+                ctx.save();
+                ctx.translate(14, padT + plotH / 2);
+                ctx.rotate(-Math.PI / 2);
+                ctx.fillStyle = '#1a4d8c';
+                ctx.font = 'bold 11px "Segoe UI","PingFang SC",sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('销量 (台)', 0, 0);
+                ctx.restore();
+            }
+
+            // ============ 绘制温度散点图 ============
+            function drawScatterTemp() {
+                const canvas = document.getElementById('scatterTempChart');
+                if (!canvas) return;
+                const w = canvas.clientWidth || 500;
+                const h = canvas.clientHeight || 300;
+                const dpr = window.devicePixelRatio || 1;
+                canvas.width = w * dpr;
+                canvas.height = h * dpr;
+                const ctx = canvas.getContext('2d');
+                ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+                ctx.clearRect(0, 0, w, h);
+
+                const padL = 55,
+                    padR = 40,
+                    padT = 32,
+                    padB = 32;
+                const plotW = w - padL - padR;
+                const plotH = h - padT - padB;
+
+                const { temps, sales } = getValidTempSales();
+                if (temps.length < 2) {
+                    ctx.fillStyle = '#999';
+                    ctx.font = '14px "Segoe UI","PingFang SC",sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('数据不足，无法绘制回归线', w / 2, h / 2);
+                    return;
+                }
+                const reg = linearRegression(temps, sales);
+
+                const allTemps = rows.filter(r => r.temp !== null && !isNaN(r.temp)).map(r => r.temp);
+                const allSales = rows.filter(r => r.sales !== null && !isNaN(r.sales)).map(r => r.sales);
+                const minX = Math.min(...allTemps, 15);
+                const maxX = Math.max(...allTemps, 26);
+                const maxY = Math.max(...allSales, 10000);
+                const xRange = maxX - minX || 1;
+                const yMax = Math.ceil(maxY / 10000) * 10000 + 10000;
+                const xScale = plotW / xRange;
+                const yScale = plotH / yMax;
+
+                // 网格
+                ctx.strokeStyle = '#e8ecf1';
+                ctx.lineWidth = 0.5;
+                const gridLinesY = 5;
+                for (let i = 0; i <= gridLinesY; i++) {
+                    const y = padT + (plotH / gridLinesY) * i;
+                    ctx.beginPath();
+                    ctx.moveTo(padL, y);
+                    ctx.lineTo(w - padR, y);
+                    ctx.stroke();
+                    ctx.fillStyle = '#5a6c85';
+                    ctx.font = '10px "Segoe UI","PingFang SC",sans-serif';
+                    ctx.textAlign = 'right';
+                    ctx.fillText(Math.round(yMax * (1 - i / gridLinesY)).toLocaleString(), padL - 6, y + 4);
+                }
+                for (let tx = Math.ceil(minX); tx <= Math.floor(maxX); tx += 1) {
+                    const x = padL + (tx - minX) * xScale;
+                    ctx.beginPath();
+                    ctx.moveTo(x, padT);
+                    ctx.lineTo(x, h - padB);
+                    ctx.stroke();
+                    ctx.fillStyle = '#5a6c85';
+                    ctx.font = '10px "Segoe UI","PingFang SC",sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(tx, x, h - padB + 15);
+                }
+                // 轴线
+                ctx.strokeStyle = '#bcc5d0';
+                ctx.lineWidth = 1.2;
+                ctx.beginPath();
+                ctx.moveTo(padL, padT);
+                ctx.lineTo(padL, h - padB);
+                ctx.lineTo(w - padR, h - padB);
+                ctx.stroke();
+
+                // 散点：历史数据(2024-2025) vs 2026年数据
+                const histData = [];
+                const newData = [];
+                rows.forEach(r => {
+                    if (r.sales === null || r.temp === null || isNaN(r.sales) || isNaN(r.temp)) return;
+                    const pt = { x: r.temp, y: r.sales, year: r.year };
+                    if (r.year <= 2025) histData.push(pt);
+                    else newData.push(pt);
+                });
+
+                function drawPoints(data, fillColor, strokeColor, radius) {
+                    data.forEach(pt => {
+                        const sx = padL + (pt.x - minX) * xScale;
+                        const sy = h - padB - pt.y * yScale;
+                        ctx.beginPath();
+                        ctx.arc(sx, sy, radius, 0, 2 * Math.PI);
+                        ctx.fillStyle = fillColor;
+                        ctx.fill();
+                        ctx.strokeStyle = strokeColor;
+                        ctx.lineWidth = 1.8;
+                        ctx.stroke();
+                    });
+                }
+                drawPoints(histData, '#2c6e9e', '#1a5280', 5.5);
+                drawPoints(newData, '#e07b39', '#b85c1a', 6.5);
+
+                // 回归线
+                const x1 = minX;
+                const x2 = maxX;
+                const y1p = reg.slope * x1 + reg.intercept;
+                const y2p = reg.slope * x2 + reg.intercept;
+                const px1 = padL;
+                const px2 = w - padR;
+                const py1 = h - padB - Math.max(0, Math.min(yMax, y1p)) * yScale;
+                const py2 = h - padB - Math.max(0, Math.min(yMax, y2p)) * yScale;
+                ctx.beginPath();
+                ctx.moveTo(px1, py1);
+                ctx.lineTo(px2, py2);
+                ctx.strokeStyle = '#c7442e';
+                ctx.lineWidth = 2.6;
+                ctx.setLineDash([8, 5]);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                // 回归方程
+                ctx.fillStyle = '#c7442e';
+                ctx.font = 'italic 11px "Segoe UI","PingFang SC",sans-serif';
+                ctx.textAlign = 'left';
+                const eqText = '销量 = ' + Math.round(reg.slope).toLocaleString() + '×温度 + ' + Math.round(reg
+                    .intercept).toLocaleString();
+                ctx.fillText(eqText, padL + 8, padT - 8);
+
+                // 图例
+                ctx.fillStyle = '#2c6e9e';
+                ctx.beginPath();
+                ctx.arc(w - padR - 100, padT + 8, 5, 0, 2 * Math.PI);
+                ctx.fill();
+                ctx.fillStyle = '#333';
+                ctx.font = '10px "Segoe UI","PingFang SC",sans-serif';
+                ctx.textAlign = 'left';
+                ctx.fillText('2024–2025', w - padR - 90, padT + 12);
+                ctx.fillStyle = '#e07b39';
+                ctx.beginPath();
+                ctx.arc(w - padR - 100, padT + 28, 5, 0, 2 * Math.PI);
+                ctx.fill();
+                ctx.fillStyle = '#333';
+                ctx.fillText('2026', w - padR - 90, padT + 32);
+
+                // 轴标签
+                ctx.fillStyle = '#1a4d8c';
+                ctx.font = 'bold 11px "Segoe UI","PingFang SC",sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('温度 (°C) →', padL + plotW / 2, h - 2);
+                ctx.save();
+                ctx.translate(14, padT + plotH / 2);
+                ctx.rotate(-Math.PI / 2);
+                ctx.fillText('销量 (台)', 0, 0);
+                ctx.restore();
+            }
+
+            // ============ 绘制THI散点图 ============
+            function drawScatterThi() {
+                const canvas = document.getElementById('scatterThiChart');
+                if (!canvas) return;
+                const w = canvas.clientWidth || 500;
+                const h = canvas.clientHeight || 300;
+                const dpr = window.devicePixelRatio || 1;
+                canvas.width = w * dpr;
+                canvas.height = h * dpr;
+                const ctx = canvas.getContext('2d');
+                ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+                ctx.clearRect(0, 0, w, h);
+
+                const padL = 55,
+                    padR = 40,
+                    padT = 32,
+                    padB = 32;
+                const plotW = w - padL - padR;
+                const plotH = h - padT - padB;
+
+                const { thisArr, sales } = getValidThiSales();
+                if (thisArr.length < 2) {
+                    ctx.fillStyle = '#999';
+                    ctx.font = '14px "Segoe UI","PingFang SC",sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('数据不足，无法绘制回归线', w / 2, h / 2);
+                    return;
+                }
+                const reg = linearRegression(thisArr, sales);
+
+                const allThi = rows.filter(r => r.thi !== null && !isNaN(r.thi)).map(r => r.thi);
+                const allSales = rows.filter(r => r.sales !== null && !isNaN(r.sales)).map(r => r.sales);
+                const minX = Math.floor(Math.min(...allThi, 15.5) * 100) / 100;
+                const maxX = Math.ceil(Math.max(...allThi, 19.5) * 100) / 100;
+                const maxY = Math.max(...allSales, 10000);
+                const xRange = maxX - minX || 0.5;
+                const yMax = Math.ceil(maxY / 10000) * 10000 + 10000;
+                const xScale = plotW / xRange;
+                const yScale = plotH / yMax;
+
+                // 网格
+                ctx.strokeStyle = '#e8ecf1';
+                ctx.lineWidth = 0.5;
+                const gridLinesY = 5;
+                for (let i = 0; i <= gridLinesY; i++) {
+                    const y = padT + (plotH / gridLinesY) * i;
+                    ctx.beginPath();
+                    ctx.moveTo(padL, y);
+                    ctx.lineTo(w - padR, y);
+                    ctx.stroke();
+                    ctx.fillStyle = '#5a6c85';
+                    ctx.font = '10px "Segoe UI","PingFang SC",sans-serif';
+                    ctx.textAlign = 'right';
+                    ctx.fillText(Math.round(yMax * (1 - i / gridLinesY)).toLocaleString(), padL - 6, y + 4);
+                }
+                const thiTicks = [];
+                for (let t = Math.ceil(minX * 100) / 100; t <= maxX + 0.001; t += 0.5) {
+                    thiTicks.push(Math.round(t * 100) / 100);
+                }
+                thiTicks.forEach(tx => {
+                    const x = padL + (tx - minX) * xScale;
+                    ctx.beginPath();
+                    ctx.moveTo(x, padT);
+                    ctx.lineTo(x, h - padB);
+                    ctx.stroke();
+                    ctx.fillStyle = '#5a6c85';
+                    ctx.font = '9px "Segoe UI","PingFang SC",sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(tx.toFixed(1), x, h - padB + 14);
+                });
+                // 轴线
+                ctx.strokeStyle = '#bcc5d0';
+                ctx.lineWidth = 1.2;
+                ctx.beginPath();
+                ctx.moveTo(padL, padT);
+                ctx.lineTo(padL, h - padB);
+                ctx.lineTo(w - padR, h - padB);
+                ctx.stroke();
+
+                // 散点
+                const histData = [];
+                const newData = [];
+                rows.forEach(r => {
+                    if (r.sales === null || r.thi === null || isNaN(r.sales) || isNaN(r.thi)) return;
+                    const pt = { x: r.thi, y: r.sales, year: r.year };
+                    if (r.year <= 2025) histData.push(pt);
+                    else newData.push(pt);
+                });
+
+                function drawPoints(data, fillColor, strokeColor, radius) {
+                    data.forEach(pt => {
+                        const sx = padL + (pt.x - minX) * xScale;
+                        const sy = h - padB - pt.y * yScale;
+                        ctx.beginPath();
+                        ctx.arc(sx, sy, radius, 0, 2 * Math.PI);
+                        ctx.fillStyle = fillColor;
+                        ctx.fill();
+                        ctx.strokeStyle = strokeColor;
+                        ctx.lineWidth = 1.8;
+                        ctx.stroke();
+                    });
+                }
+                drawPoints(histData, '#30846f', '#1d5e4a', 5.5);
+                drawPoints(newData, '#e07b39', '#b85c1a', 6.5);
+
+                // 回归线
+                const x1 = minX;
+                const x2 = maxX;
+                const y1p = reg.slope * x1 + reg.intercept;
+                const y2p = reg.slope * x2 + reg.intercept;
+                const px1 = padL;
+                const px2 = w - padR;
+                const py1 = h - padB - Math.max(0, Math.min(yMax, y1p)) * yScale;
+                const py2 = h - padB - Math.max(0, Math.min(yMax, y2p)) * yScale;
+                ctx.beginPath();
+                ctx.moveTo(px1, py1);
+                ctx.lineTo(px2, py2);
+                ctx.strokeStyle = '#c7442e';
+                ctx.lineWidth = 2.6;
+                ctx.setLineDash([8, 5]);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                // 方程
+                ctx.fillStyle = '#c7442e';
+                ctx.font = 'italic 11px "Segoe UI","PingFang SC",sans-serif';
+                ctx.textAlign = 'left';
+                const eqText = '销量 = ' + Math.round(reg.slope).toLocaleString() + '×THI + ' + Math.round(reg.intercept)
+                    .toLocaleString();
+                ctx.fillText(eqText, padL + 8, padT - 8);
+
+                // 图例
+                ctx.fillStyle = '#30846f';
+                ctx.beginPath();
+                ctx.arc(w - padR - 100, padT + 8, 5, 0, 2 * Math.PI);
+                ctx.fill();
+                ctx.fillStyle = '#333';
+                ctx.font = '10px "Segoe UI","PingFang SC",sans-serif';
+                ctx.textAlign = 'left';
+                ctx.fillText('2024–2025', w - padR - 90, padT + 12);
+                ctx.fillStyle = '#e07b39';
+                ctx.beginPath();
+                ctx.arc(w - padR - 100, padT + 28, 5, 0, 2 * Math.PI);
+                ctx.fill();
+                ctx.fillStyle = '#333';
+                ctx.fillText('2026', w - padR - 90, padT + 32);
+
+                // 轴标签
+                ctx.fillStyle = '#1a4d8c';
+                ctx.font = 'bold 11px "Segoe UI","PingFang SC",sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('THI →', padL + plotW / 2, h - 2);
+                ctx.save();
+                ctx.translate(14, padT + plotH / 2);
+                ctx.rotate(-Math.PI / 2);
+                ctx.fillText('销量 (台)', 0, 0);
+                ctx.restore();
+            }
+
+            // ============ 绘制所有图表 ============
+            function drawAllCharts() {
+                drawLineChart();
+                drawScatterTemp();
+                drawScatterThi();
+            }
+
+            // ============ 窗口大小变化处理 ============
+            let resizeTimeout;
+            window.addEventListener('resize', () => {
+                if (resizeTimeout) clearTimeout(resizeTimeout);
+                resizeTimeout = setTimeout(() => {
+                    drawAllCharts();
+                }, 200);
+            });
+
+            // ============ 初始化 ============
+            function init() {
+                renderTable();
+                syncEditableData();
+                updateCards();
+                drawAllCharts();
+            }
+
+            // 页面加载完成后初始化
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', init);
+            } else {
+                init();
+            }
+
+            // ============ 暴露刷新函数到全局 ============
+            window.refreshDashboard = refreshAll;
+            console.log('✅ 空调需求看板已就绪 · 可编辑2026年6-8月数据 · 实时更新弹性系数');
+            console.log('   📝 请在表格中黄色高亮行填写数据');
+            console.log('   📊 弹性系数卡片和图表演示将自动刷新');
+        })();
+    </script>
+</body>
+</html>
