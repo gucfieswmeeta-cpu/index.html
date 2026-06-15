@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>气候预测追踪器 · ENSO & DWD & 新闻动态</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js">
+    </script>
+    <style>
+        :root {
+            --bg: #f5f3ef;
+            --surface: #ffffff;
+            --surface-alt: #faf9f7;
+            --text: #2c2416;
+            --text-secondary: #6b5e4a;
+            --border: #e0d9cc;
+            --accent-warm: #c75b39;
+            --accent-cool: #3a7ca5;
+            --accent-neutral: #7a8b6f;
+            --accent-gold: #b8943e;
+            --danger: #c0392b;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+            --shadow-md: 0 4px 16px rgba(0,0,0,0.08);
+            --shadow-lg: 0 8px 32px rgba(0,0,0,0.10);
+            --radius-sm: 8px;
+            --radius: 12px;
+            --radius-lg: 16px;
+            --transition: 0.2s cubic-bezier(0.4,0,0.2,1);
+            --font: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', system-ui, sans-serif;
+            --font-mono: 'SF Mono', 'Cascadia Code', 'Consolas', 'Menlo', monospace;
+        }
+        *{ margin:0; padding:0; box-sizing:border-box; }
+        body{ font-family:var(--font); background:var(--bg); color:var(--text); line-height:1.6; min-height:100vh; background-image:radial-gradient(ellipse at 15% 20%, rgba(199,91,57,0.03) 0%, transparent 55%),radial-gradient(ellipse at 78% 65%, rgba(58,124,165,0.04) 0%, transparent 55%),radial-gradient(ellipse at 50% 85%, rgba(184,148,62,0.03) 0%, transparent 50%); }
+        .app-header{ background:var(--surface); border-bottom:1px solid var(--border); padding:0 24px; position:sticky; top:0; z-index:100; box-shadow:var(--shadow-sm); }
+        .header-inner{ max-width:1400px; margin:0 auto; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; padding:14px 0; }
+        .app-title{ font-size:1.35rem; font-weight:700; letter-spacing:-0.01em; display:flex; align-items:center; gap:10px; white-space:nowrap; }
+        .app-title .icon{ font-size:1.6rem; }
+        .source-links{ display:flex; gap:10px; flex-wrap:wrap; }
+        .source-link{ display:inline-flex; align-items:center; gap:6px; padding:7px 14px; border-radius:20px; font-size:0.82rem; font-weight:600; text-decoration:none; transition:var(--transition); border:1.5px solid transparent; white-space:nowrap; letter-spacing:0.01em; }
+        .source-link.noaa{ background:#fef5f2; color:#a04028; border-color:#f0d5cc; }
+        .source-link.noaa:hover{ background:#fce8e1; border-color:#c75b39; transform:translateY(-1px); box-shadow:var(--shadow-sm); }
+        .source-link.dwd{ background:#f2f7fa; color:#2c6080; border-color:#c8dce8; }
+        .source-link.dwd:hover{ background:#e4f0f6; border-color:#3a7ca5; transform:translateY(-1px); box-shadow:var(--shadow-sm); }
+        .source-link .arrow{ font-size:0.7rem; opacity:0.6; }
+        .main-container{ max-width:1400px; margin:0 auto; padding:20px 24px 40px; }
+        .tab-nav{ display:flex; gap:6px; margin-bottom:20px; background:var(--surface); border-radius:var(--radius-lg); padding:5px; box-shadow:var(--shadow-sm); border:1px solid var(--border); overflow-x:auto; -webkit-overflow-scrolling:touch; }
+        .tab-btn{ flex:1; min-width:100px; padding:11px 14px; border:none; background:transparent; border-radius:var(--radius); cursor:pointer; font-size:0.85rem; font-weight:600; color:var(--text-secondary); transition:var(--transition); white-space:nowrap; letter-spacing:0.01em; font-family:var(--font); }
+        .tab-btn:hover{ color:var(--text); background:var(--surface-alt); }
+        .tab-btn.active{ background:var(--text); color:#fff; box-shadow:var(--shadow-md); }
+        .tab-icon{ margin-right:5px; }
+        .tab-content{ display:none; animation:fadeSlide 0.35s ease; }
+        .tab-content.active{ display:block; }
+        @keyframes fadeSlide{ from{ opacity:0; transform:translateY(8px); } to{ opacity:1; transform:translateY(0); } }
+        .card{ background:var(--surface); border-radius:var(--radius-lg); border:1px solid var(--border); box-shadow:var(--shadow-sm); padding:20px 22px; margin-bottom:18px; transition:var(--transition); }
+        .card:hover{ box-shadow:var(--shadow-md); }
+        .card-header{ font-weight:700; font-size:1rem; margin-bottom:14px; display:flex; align-items:center; gap:8px; letter-spacing:0.01em; }
+        .card-header .dot{ width:9px; height:9px; border-radius:50%; display:inline-block; }
+        .dot.enso{ background:#c75b39; } .dot.dwd{ background:#3a7ca5; } .dot.news{ background:#e6a817; }
+        .form-grid{ display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:12px; align-items:end; }
+        .form-group{ display:flex; flex-direction:column; gap:4px; }
+        .form-group label{ font-size:0.78rem; font-weight:600; color:var(--text-secondary); letter-spacing:0.02em; text-transform:uppercase; }
+        .form-group input, .form-group select, .form-group textarea{ padding:9px 12px; border:1.5px solid var(--border); border-radius:var(--radius-sm); font-size:0.9rem; font-family:var(--font); background:var(--surface-alt); transition:var(--transition); color:var(--text); width:100%; }
+        .form-group textarea{ resize:vertical; min-height:60px; }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus{ outline:none; border-color:#b8943e; box-shadow:0 0 0 3px rgba(184,148,62,0.1); background:#fff; }
+        .btn{ padding:10px 18px; border:none; border-radius:var(--radius-sm); cursor:pointer; font-weight:600; font-size:0.88rem; transition:var(--transition); letter-spacing:0.01em; font-family:var(--font); display:inline-flex; align-items:center; gap:6px; white-space:nowrap; }
+        .btn-primary{ background:#2c2416; color:#fff; }
+        .btn-primary:hover{ background:#4a3d2a; transform:translateY(-1px); box-shadow:var(--shadow-md); }
+        .btn-secondary{ background:var(--surface-alt); color:var(--text); border:1.5px solid var(--border); }
+        .btn-secondary:hover{ background:#f0ede6; border-color:#c0b8a8; }
+        .btn-danger{ background:#fff; color:var(--danger); border:1.5px solid #f0d0d0; }
+        .btn-danger:hover{ background:#fef5f5; border-color:#c0392b; }
+        .btn-sm{ padding:5px 10px; font-size:0.75rem; border-radius:6px; }
+        .btn-xs{ padding:3px 8px; font-size:0.7rem; border-radius:5px; }
+        .btn-icon{ background:none; border:none; cursor:pointer; font-size:1.1rem; line-height:1; padding:2px 6px; border-radius:4px; color:#a04028; transition:var(--transition); }
+        .btn-icon:hover{ background:#fce8e1; color:#c0392b; }
+        .btn-row{ display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+        .batch-table-wrap{ overflow-x:auto; -webkit-overflow-scrolling:touch; margin-top:8px; border-radius:var(--radius-sm); border:1px solid var(--border); }
+        .batch-table{ width:100%; border-collapse:collapse; font-size:0.85rem; min-width:600px; }
+        .batch-table th, .batch-table td{ padding:9px 10px; text-align:center; border-bottom:1px solid var(--border); white-space:nowrap; }
+        .batch-table th{ background:#faf9f7; font-weight:700; font-size:0.75rem; letter-spacing:0.03em; color:var(--text-secondary); text-transform:uppercase; position:sticky; top:0; }
+        .batch-table input{ width:55px; padding:6px 4px; text-align:center; border:1.5px solid var(--border); border-radius:5px; font-size:0.85rem; font-family:var(--font-mono); background:#fff; transition:var(--transition); }
+        .batch-table input:focus{ border-color:#b8943e; outline:none; box-shadow:0 0 0 2px rgba(184,148,62,0.12); }
+        .batch-table .auto-filled{ background:#fdfcf9; color:#8a7a5a; font-size:0.78rem; }
+        .history-table-wrap{ overflow-x:auto; -webkit-overflow-scrolling:touch; border-radius:var(--radius-sm); border:1px solid var(--border); max-height:420px; overflow-y:auto; }
+        .history-table{ width:100%; border-collapse:collapse; font-size:0.84rem; min-width:650px; }
+        .history-table th, .history-table td{ padding:9px 10px; text-align:center; border-bottom:1px solid var(--border); white-space:nowrap; }
+        .history-table th{ background:#faf9f7; font-weight:700; font-size:0.73rem; letter-spacing:0.03em; color:var(--text-secondary); text-transform:uppercase; position:sticky; top:0; z-index:2; }
+        .history-table tbody tr{ transition:var(--transition); }
+        .history-table tbody tr:hover{ background:#fdfcf8; }
+        .prob-cell{ font-family:var(--font-mono); font-weight:600; font-size:0.85rem; }
+        .prob-high{ color:#c75b39; } .prob-mid{ color:#7a8b6f; } .prob-low{ color:#3a7ca5; }
+        .tag{ display:inline-block; padding:2px 8px; border-radius:10px; font-size:0.7rem; font-weight:700; letter-spacing:0.03em; }
+        .tag.el-nino{ background:#fef0eb; color:#b84520; } .tag.la-nina{ background:#e8f2f8; color:#2c6080; } .tag.neutral{ background:#f2f5ef; color:#5a6b4f; }
+        .chart-container{ position:relative; width:100%; min-height:320px; }
+        .chart-container canvas{ width:100% !important; max-height:380px; }
+        .chart-filters{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:12px; }
+        .chart-filters select{ padding:7px 10px; border-radius:var(--radius-sm); border:1.5px solid var(--border); font-family:var(--font); font-size:0.85rem; background:#fff; cursor:pointer; }
+        .empty-state{ text-align:center; padding:40px 20px; color:var(--text-secondary); }
+        .empty-state .big-icon{ font-size:3rem; display:block; margin-bottom:10px; opacity:0.5; }
+        .info-banner{ background:#fefdf8; border:1px solid #e8dfc0; border-radius:var(--radius); padding:12px 16px; font-size:0.82rem; color:#6b5a2e; margin-bottom:14px; display:flex; align-items:flex-start; gap:8px; }
+        .info-banner .info-icon{ font-size:1.1rem; flex-shrink:0; }
+        .toast{ position:fixed; bottom:28px; right:28px; background:#2c2416; color:#fff; padding:12px 20px; border-radius:25px; font-weight:600; font-size:0.85rem; box-shadow:var(--shadow-lg); z-index:999; opacity:0; transform:translateY(16px); pointer-events:none; transition:all 0.3s ease; letter-spacing:0.02em; }
+        .toast.show{ opacity:1; transform:translateY(0); pointer-events:auto; }
+        .toast.success{ background:#3d6b3a; } .toast.warning{ background:#b8943e; }
+        .news-list{ display:flex; flex-direction:column; gap:12px; max-height:500px; overflow-y:auto; padding-right:4px; }
+        .news-item{ background:var(--surface-alt); border-radius:var(--radius); border:1px solid var(--border); padding:14px 16px; transition:var(--transition); }
+        .news-item:hover{ border-color:#c0b8a8; box-shadow:var(--shadow-sm); }
+        .news-title{ font-weight:700; font-size:1rem; margin-bottom:6px; }
+        .news-meta{ display:flex; gap:16px; flex-wrap:wrap; font-size:0.75rem; color:var(--text-secondary); margin-bottom:6px; }
+        .news-meta span{ display:flex; align-items:center; gap:4px; }
+        .news-summary{ font-size:0.85rem; color:var(--text); line-height:1.5; margin-bottom:8px; }
+        .news-link{ font-size:0.8rem; color:var(--accent-cool); text-decoration:none; font-weight:600; }
+        .news-link:hover{ text-decoration:underline; }
+        .news-actions{ display:flex; gap:8px; margin-top:6px; }
+        @media (max-width:768px){
+            .header-inner{ flex-direction:column; align-items:flex-start; gap:8px; }
+            .source-links{ width:100%; }
+            .source-link{ flex:1; justify-content:center; font-size:0.75rem; padding:6px 10px; }
+            .form-grid{ grid-template-columns:repeat(auto-fit, minmax(110px,1fr)); gap:8px; }
+            .tab-btn{ font-size:0.72rem; padding:9px 10px; min-width:80px; }
+            .card{ padding:14px 12px; }
+            .chart-container{ min-height:250px; }
+            .chart-container canvas{ max-height:280px; }
+            .batch-table-wrap, .history-table-wrap{ font-size:0.72rem; }
+            .batch-table input{ width:40px; font-size:0.75rem; }
+        }
+        @media (max-width:480px){
+            .app-title{ font-size:1.1rem; }
+            .tab-nav{ gap:2px; padding:3px; }
+            .tab-btn{ font-size:0.65rem; padding:7px 6px; min-width:60px; }
+            .btn{ font-size:0.78rem; padding:8px 12px; }
+        }
+    </style>
+</head>
+<body>
+<header class="app-header">
+    <div class="header-inner">
+        <div class="app-title"><span class="icon">🌍</span> 气候预测追踪器</div>
+        <div class="source-links">
+            <a href="https://www.cpc.ncep.noaa.gov/products/analysis_monitoring/enso/roni/probabilities/#probabilities-table" target="_blank" rel="noopener" class="source-link noaa">🔴 NOAA ENSO 概率表 <span class="arrow">↗</span></a>
+            <a href="https://www.dwd.de/EN/ourservices/kvhs_en/2_expert/month/monthly_node.html" target="_blank" rel="noopener" class="source-link dwd">🔵 DWD 月度预测 <span class="arrow">↗</span></a>
+        </div>
+    </div>
+</header>
+
+<div class="main-container">
+    <nav class="tab-nav" id="tabNav">
+        <button class="tab-btn active" data-tab="enso"><span class="tab-icon">🔴</span> ENSO</button>
+        <button class="tab-btn" data-tab="dwd"><span class="tab-icon">🔵</span> DWD</button>
+        <button class="tab-btn" data-tab="news"><span class="tab-icon">📰</span> 新闻</button>
+        <button class="tab-btn" data-tab="manage"><span class="tab-icon">⚙️</span> 管理</button>
+    </nav>
+
+    <!-- ENSO TAB -->
+    <div class="tab-content active" id="tab-enso">
+        <div class="card">
+            <div class="card-header"><span class="dot enso"></span> 批量录入 ENSO 预测数据</div>
+            <div class="form-grid" style="margin-bottom:10px;">
+                <div class="form-group"><label>📅 更新日期</label><input type="date" id="ensoUpdateDate"></div>
+                <div class="form-group" style="align-self:end;"><button class="btn btn-secondary" onclick="generateEnsoSeasons()" style="width:100%;">🔄 自动生成未来季节</button></div>
+            </div>
+            <div class="batch-table-wrap">
+                <table class="batch-table" id="ensoBatchTable">
+                    <thead><tr><th>目标季节</th><th>El Niño (%)</th><th>Neutral (%)</th><th>La Niña (%)</th><th>合计</th><th>操作</th></tr></thead>
+                    <tbody id="ensoBatchBody"><tr><td colspan="6" style="color:var(--text-secondary);padding:20px;">请点击「自动生成未来季节」或手动添加行</td></tr></tbody>
+                </table>
+            </div>
+            <div class="btn-row">
+                <button class="btn btn-primary" onclick="saveEnsoBatch()">💾 保存此批次</button>
+                <button class="btn btn-secondary" onclick="addEnsoRow()">➕ 添加一行</button>
+                <button class="btn btn-secondary" onclick="clearEnsoBatch()">🗑 清空表格</button>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header"><span class="dot enso"></span> 预测变化趋势图</div>
+            <div class="chart-filters">
+                <label style="font-weight:600;font-size:0.85rem;">选择目标季节：</label>
+                <select id="ensoChartSeason" onchange="updateEnsoChart()"><option value="">-- 请选择 --</option></select>
+            </div>
+            <div class="chart-container"><canvas id="ensoChartCanvas"></canvas></div>
+            <div class="empty-state" id="ensoChartEmpty"><span class="big-icon">📈</span><p>请先保存数据，然后选择一个目标季节查看趋势</p></div>
+        </div>
+        <div class="card">
+            <div class="card-header"><span class="dot enso"></span> ENSO 预测历史记录 <span style="margin-left:auto;font-weight:400;font-size:0.75rem;" id="ensoRecordCount">共 0 条</span></div>
+            <div class="history-table-wrap">
+                <table class="history-table">
+                    <thead><tr><th>更新日期</th><th>目标季节</th><th>El Niño</th><th>Neutral</th><th>La Niña</th><th>主导状态</th><th>操作</th></tr></thead>
+                    <tbody id="ensoHistoryBody"><tr><td colspan="7" style="color:var(--text-secondary);padding:24px;">暂无记录</td></tr></tbody>
+                </table>
+            </div>
+            <div class="btn-row" style="margin-top:10px;"><button class="btn btn-danger btn-sm" onclick="clearAllEnso()">🗑 清空所有ENSO记录</button></div>
+        </div>
+    </div>
+
+    <!-- DWD TAB -->
+    <div class="tab-content" id="tab-dwd">
+        <div class="card">
+            <div class="card-header"><span class="dot dwd"></span> 批量录入 DWD 月度预测数据</div>
+            <div class="form-grid" style="margin-bottom:10px;">
+                <div class="form-group"><label>📅 更新日期</label><input type="date" id="dwdUpdateDate"></div>
+                <div class="form-group" style="align-self:end;"><button class="btn btn-secondary" onclick="generateDwdMonths()" style="width:100%;">🔄 自动生成未来6个月</button></div>
+            </div>
+            <div class="batch-table-wrap">
+                <table class="batch-table" id="dwdBatchTable">
+                    <thead><tr><th>目标月份</th><th>温度偏高 (%)</th><th>温度接近 (%)</th><th>温度偏低 (%)</th><th>降水偏多 (%)</th><th>降水接近 (%)</th><th>降水偏少 (%)</th><th>操作</th></tr></thead>
+                    <tbody id="dwdBatchBody"><tr><td colspan="8" style="color:var(--text-secondary);padding:20px;">请点击「自动生成未来6个月」或手动添加行</td></tr></tbody>
+                </table>
+            </div>
+            <div class="btn-row">
+                <button class="btn btn-primary" onclick="saveDwdBatch()">💾 保存此批次</button>
+                <button class="btn btn-secondary" onclick="addDwdRow()">➕ 添加一行</button>
+                <button class="btn btn-secondary" onclick="clearDwdBatch()">🗑 清空表格</button>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header"><span class="dot dwd"></span> DWD 预测变化趋势图</div>
+            <div class="chart-filters">
+                <label style="font-weight:600;font-size:0.85rem;">选择目标月份：</label>
+                <select id="dwdChartMonth" onchange="updateDwdChart()"><option value="">-- 请选择 --</option></select>
+                <select id="dwdChartType" onchange="updateDwdChart()"><option value="temp">温度概率</option><option value="precip">降水概率</option></select>
+            </div>
+            <div class="chart-container"><canvas id="dwdChartCanvas"></canvas></div>
+            <div class="empty-state" id="dwdChartEmpty"><span class="big-icon">📉</span><p>请先保存数据，然后选择一个目标月份查看趋势</p></div>
+        </div>
+        <div class="card">
+            <div class="card-header"><span class="dot dwd"></span> DWD 预测历史记录 <span style="margin-left:auto;font-weight:400;font-size:0.75rem;" id="dwdRecordCount">共 0 条</span></div>
+            <div class="history-table-wrap">
+                <table class="history-table">
+                    <thead><tr><th>更新日期</th><th>目标月份</th><th>温度偏高</th><th>温度接近</th><th>温度偏低</th><th>降水偏多</th><th>降水接近</th><th>降水偏少</th><th>操作</th></tr></thead>
+                    <tbody id="dwdHistoryBody"><tr><td colspan="9" style="color:var(--text-secondary);padding:24px;">暂无记录</td></tr></tbody>
+                </table>
+            </div>
+            <div class="btn-row" style="margin-top:10px;"><button class="btn btn-danger btn-sm" onclick="clearAllDwd()">🗑 清空所有DWD记录</button></div>
+        </div>
+    </div>
+
+    <!-- NEWS TAB -->
+    <div class="tab-content" id="tab-news">
+        <div class="card">
+            <div class="card-header"><span class="dot news"></span> 📰 气温变化新闻动态</div>
+            <div class="info-banner"><span class="info-icon">💡</span><span>手动添加或通过 JSON 批量导入重大气候新闻。可配合外部脚本定期抓取新闻生成 JSON 文件后一键导入。</span></div>
+            <div class="card" style="background:var(--surface-alt);">
+                <div class="card-header" style="font-size:0.9rem;">✍️ 添加新新闻</div>
+                <div class="form-grid">
+                    <div class="form-group"><label>📅 日期</label><input type="date" id="newsDate"></div>
+                    <div class="form-group"><label>📰 来源</label><input type="text" id="newsSource" placeholder="如：Nature"></div>
+                    <div class="form-group"><label>📌 关键词</label><input type="text" id="newsKeywords" placeholder="如：高温、热浪"></div>
+                    <div class="form-group" style="grid-column:span 2;"><label>📋 标题</label><input type="text" id="newsTitle" placeholder="新闻标题"></div>
+                    <div class="form-group" style="grid-column:span 2;"><label>📝 摘要</label><textarea id="newsSummary" rows="2" placeholder="简要描述"></textarea></div>
+                    <div class="form-group" style="grid-column:span 2;"><label>🔗 链接</label><input type="url" id="newsLink" placeholder="https://..."></div>
+                </div>
+                <div class="btn-row">
+                    <button class="btn btn-primary" onclick="addNewsItem()">➕ 添加新闻</button>
+                    <button class="btn btn-secondary" onclick="clearNewsForm()">🗑 清空表单</button>
+                </div>
+            </div>
+            <div class="btn-row" style="justify-content:flex-end;">
+                <button class="btn btn-secondary btn-sm" onclick="document.getElementById('newsImportFile').click()">📤 导入新闻 (JSON)</button>
+                <button class="btn btn-secondary btn-sm" onclick="exportNewsJSON()">📥 导出新闻 (JSON)</button>
+                <button class="btn btn-danger btn-sm" onclick="clearAllNews()">🗑 清空所有新闻</button>
+            </div>
+            <input type="file" id="newsImportFile" accept=".json" style="display:none;" onchange="handleNewsImport(event)">
+            <div class="card-header" style="margin-top:16px;">📋 新闻列表 <span style="font-weight:400;font-size:0.8rem;margin-left:auto;" id="newsCount">共 0 条</span></div>
+            <div class="news-list" id="newsListContainer"><div class="empty-state"><span class="big-icon">📭</span><p>暂无新闻</p></div></div>
+        </div>
+    </div>
+
+    <!-- MANAGE TAB -->
+    <div class="tab-content" id="tab-manage">
+        <div class="card">
+            <div class="card-header">⚙️ 数据管理</div>
+            <p style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:12px;">所有数据存储在浏览器本地。可导出备份或导入数据。</p>
+            <div class="btn-row">
+                <button class="btn btn-primary" onclick="exportAllData()">📥 导出全部数据 (JSON)</button>
+                <button class="btn btn-secondary" onclick="document.getElementById('importAllFileInput').click()">📤 导入数据 (JSON)</button>
+                <button class="btn btn-danger" onclick="resetAllData()">⚠️ 清除全部数据</button>
+            </div>
+            <input type="file" id="importAllFileInput" accept=".json" style="display:none;" onchange="importAllData(event)">
+            <div id="storageInfo" style="margin-top:12px;font-size:0.78rem;color:var(--text-secondary);"></div>
+        </div>
+        <div class="card">
+            <div class="card-header">📋 使用说明</div>
+            <ol style="font-size:0.85rem;color:var(--text-secondary);padding-left:18px;line-height:2;">
+                <li>从 NOAA / DWD 获取最新预测数据。</li>
+                <li>在相应标签页使用<strong>批量录入</strong>，填入概率值并保存。</li>
+                <li>通过<strong>趋势图</strong>查看同一目标在不同更新日期的变化。</li>
+                <li><strong>新闻页面</strong>可手动添加或导入气候新闻 JSON。</li>
+                <li>定期<strong>导出数据</strong>备份。</li>
+            </ol>
+        </div>
+    </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function() {
+    const STORAGE_KEY_ENSO = 'climate_tracker_enso_records';
+    const STORAGE_KEY_DWD = 'climate_tracker_dwd_records';
+    const STORAGE_KEY_NEWS = 'climate_tracker_news';
+
+    function loadEnsoRecords() { try { const raw = localStorage.getItem(STORAGE_KEY_ENSO); return raw ? JSON.parse(raw) : []; } catch (e) { return []; } }
+    function saveEnsoRecords(records) { localStorage.setItem(STORAGE_KEY_ENSO, JSON.stringify(records)); }
+    function loadDwdRecords() { try { const raw = localStorage.getItem(STORAGE_KEY_DWD); return raw ? JSON.parse(raw) : []; } catch (e) { return []; } }
+    function saveDwdRecords(records) { localStorage.setItem(STORAGE_KEY_DWD, JSON.stringify(records)); }
+    function loadNews() { try { const raw = localStorage.getItem(STORAGE_KEY_NEWS); return raw ? JSON.parse(raw) : []; } catch (e) { return []; } }
+    function saveNews(news) { localStorage.setItem(STORAGE_KEY_NEWS, JSON.stringify(news)); }
+
+    let toastTimer;
+    function showToast(msg, type = '') {
+        const toast = document.getElementById('toast');
+        toast.textContent = msg;
+        toast.className = 'toast ' + type + ' show';
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => toast.classList.remove('show'), 2200);
+    }
+
+    // TAB切换
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    const tabContents = document.querySelectorAll('.tab-content');
+    tabBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const targetTab = btn.getAttribute('data-tab');
+            tabBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            tabContents.forEach(tc => tc.classList.remove('active'));
+            const targetEl = document.getElementById('tab-' + targetTab);
+            if (targetEl) targetEl.classList.add('active');
+            if (targetTab === 'enso') { updateEnsoChartSelect(); updateEnsoChart(); }
+            else if (targetTab === 'dwd') { updateDwdChartSelect(); updateDwdChart(); }
+            else if (targetTab === 'news') { refreshNewsList(); }
+            else if (targetTab === 'manage') { updateStorageInfo(); }
+        });
+    });
+
+    // ENSO 工具
+    const ENSO_SEASON_NAMES = ['DJF','JFM','FMA','MAM','AMJ','MJJ','JJA','JAS','ASO','SON','OND','NDJ'];
+    function getEnsoSeasonLabel(seasonCode, year) {
+        if (['NDJ','DJF','JFM'].includes(seasonCode)) return seasonCode + ' ' + year + '/' + (year+1);
+        return seasonCode + ' ' + year;
+    }
+    function generateFutureEnsoSeasons(startDateStr) {
+        const startDate = startDateStr ? new Date(startDateStr+'T00:00:00') : new Date();
+        const currentMonth = startDate.getMonth();
+        const currentYear = startDate.getFullYear();
+        const monthToSeasonStart = [1,1,2,3,4,5,6,7,8,9,10,11];
+        let seasonIdx = monthToSeasonStart[currentMonth] % 12;
+        const seasons = [];
+        let yr = currentYear;
+        for (let i=0; i<10; i++) {
+            const idx = (seasonIdx + i) % 12;
+            const sName = ENSO_SEASON_NAMES[idx];
+            let displayYear = yr;
+            if (idx <= 1 && i > 6) displayYear = yr + 1;
+            seasons.push({ code: sName, year: displayYear, label: getEnsoSeasonLabel(sName, displayYear), seasonKey: sName + '|' + displayYear });
+            if (idx === 11) yr++;
+        }
+        return seasons;
+    }
+    window.generateEnsoSeasons = function() {
+        const dateInput = document.getElementById('ensoUpdateDate');
+        const dateStr = dateInput.value || new Date().toISOString().split('T')[0];
+        if (!dateInput.value) dateInput.value = dateStr;
+        const seasons = generateFutureEnsoSeasons(dateStr);
+        const tbody = document.getElementById('ensoBatchBody');
+        tbody.innerHTML = seasons.map((s,i) => `
+            <tr>
+                <td><strong>${s.label}</strong></td>
+                <td><input type="number" min="0" max="100" step="0.1" class="enso-el" placeholder="0" value="${i===0?'':''}"></td>
+                <td><input type="number" min="0" max="100" step="0.1" class="enso-neu" placeholder="0" value="${i===0?'':''}"></td>
+                <td><input type="number" min="0" max="100" step="0.1" class="enso-la" placeholder="0" value="${i===0?'':''}"></td>
+                <td class="auto-filled sum-cell">-</td>
+                <td><button class="btn-icon" onclick="this.closest('tr').remove()">✕</button></td>
+            </tr>`).join('');
+        bindEnsoAutoSum();
+    };
+    window.addEnsoRow = function() {
+        const tbody = document.getElementById('ensoBatchBody');
+        const row = document.createElement('tr');
+        row.innerHTML = `<td><input type="text" placeholder="如 JJA 2026" class="enso-season-input" style="width:110px;"></td><td><input type="number" min="0" max="100" step="0.1" class="enso-el" placeholder="0"></td><td><input type="number" min="0" max="100" step="0.1" class="enso-neu" placeholder="0"></td><td><input type="number" min="0" max="100" step="0.1" class="enso-la" placeholder="0"></td><td class="auto-filled sum-cell">-</td><td><button class="btn-icon" onclick="this.closest('tr').remove()">✕</button></td>`;
+        tbody.appendChild(row);
+        bindEnsoAutoSum();
+    };
+    window.clearEnsoBatch = function() { document.getElementById('ensoBatchBody').innerHTML = '<tr><td colspan="6" style="color:var(--text-secondary);padding:20px;">表格已清空</td></tr>'; };
+    function bindEnsoAutoSum() {
+        document.getElementById('ensoBatchBody').querySelectorAll('input[type="number"]').forEach(inp => {
+            inp.removeEventListener('input', ensoSumHandler);
+            inp.addEventListener('input', ensoSumHandler);
+        });
+    }
+    function ensoSumHandler() {
+        const row = this.closest('tr');
+        const el = parseFloat(row.querySelector('.enso-el')?.value) || 0;
+        const neu = parseFloat(row.querySelector('.enso-neu')?.value) || 0;
+        const la = parseFloat(row.querySelector('.enso-la')?.value) || 0;
+        const sum = el + neu + la;
+        const sumCell = row.querySelector('.sum-cell');
+        if (sumCell) {
+            sumCell.textContent = sum > 0 ? sum.toFixed(1)+'%' : '-';
+            sumCell.style.color = Math.abs(sum-100)<1 ? '#3d6b3a' : (sum>0?'#c75b39':'');
+            sumCell.style.fontWeight = Math.abs(sum-100)<1 ? '700' : '400';
+        }
+    }
+    window.saveEnsoBatch = function() {
+        const updateDate = document.getElementById('ensoUpdateDate').value;
+        if (!updateDate) { showToast('⚠️ 请先选择更新日期','warning'); return; }
+        const rows = document.getElementById('ensoBatchBody').querySelectorAll('tr');
+        const records = loadEnsoRecords();
+        let savedCount = 0;
+        rows.forEach(row => {
+            const seasonInput = row.querySelector('.enso-season-input');
+            let seasonKey = '';
+            if (seasonInput && seasonInput.value.trim()) seasonKey = seasonInput.value.trim();
+            else { const firstCell = row.querySelector('td:first-child strong'); if (firstCell) seasonKey = firstCell.textContent.trim(); }
+            if (!seasonKey) return;
+            const el = parseFloat(row.querySelector('.enso-el')?.value);
+            const neu = parseFloat(row.querySelector('.enso-neu')?.value);
+            const la = parseFloat(row.querySelector('.enso-la')?.value);
+            if (isNaN(el)||isNaN(neu)||isNaN(la)) return;
+            const record = { id: Date.now()+Math.random(), updateDate, seasonKey, elNino: Math.round(el*10)/10, neutral: Math.round(neu*10)/10, laNina: Math.round(la*10)/10 };
+            const exists = records.findIndex(r => r.updateDate===updateDate && r.seasonKey===seasonKey);
+            if (exists>=0) records[exists] = record; else records.push(record);
+            savedCount++;
+        });
+        if (savedCount===0) { showToast('⚠️ 未找到有效数据','warning'); return; }
+        records.sort((a,b) => b.updateDate.localeCompare(a.updateDate) || a.seasonKey.localeCompare(b.seasonKey));
+        saveEnsoRecords(records);
+        refreshEnsoHistory();
+        updateEnsoChartSelect();
+        updateEnsoChart();
+        showToast('✅ 已保存 '+savedCount+' 条ENSO记录','success');
+    };
+    function refreshEnsoHistory() {
+        const records = loadEnsoRecords();
+        document.getElementById('ensoRecordCount').textContent = '共 '+records.length+' 条';
+        const tbody = document.getElementById('ensoHistoryBody');
+        if (records.length===0) { tbody.innerHTML = '<tr><td colspan="7">暂无记录</td></tr>'; return; }
+        tbody.innerHTML = records.map(r => {
+            let domTag='tag neutral', domText='Neutral';
+            if (r.elNino>=r.neutral && r.elNino>=r.laNina && r.elNino>33) { domTag='tag el-nino'; domText='El Niño'; }
+            else if (r.laNina>=r.neutral && r.laNina>=r.elNino && r.laNina>33) { domTag='tag la-nina'; domText='La Niña'; }
+            return `<tr><td><strong>${r.updateDate}</strong></td><td>${r.seasonKey}</td><td class="prob-cell prob-high">${r.elNino.toFixed(1)}%</td><td class="prob-cell prob-mid">${r.neutral.toFixed(1)}%</td><td class="prob-cell prob-low">${r.laNina.toFixed(1)}%</td><td><span class="${domTag}">${domText}</span></td><td><button class="btn btn-danger btn-xs" onclick="deleteEnsoRecord('${r.id}')">✕</button></td></tr>`;
+        }).join('');
+    }
+    window.deleteEnsoRecord = function(id) {
+        let records = loadEnsoRecords().filter(r => String(r.id)!==String(id));
+        saveEnsoRecords(records);
+        refreshEnsoHistory();
+        updateEnsoChartSelect();
+        updateEnsoChart();
+        showToast('已删除记录','warning');
+    };
+    window.clearAllEnso = function() {
+        if (confirm('清空所有ENSO记录？')) { saveEnsoRecords([]); refreshEnsoHistory(); updateEnsoChartSelect(); updateEnsoChart(); showToast('已清空','warning'); }
+    };
+    let ensoChart = null;
+    function updateEnsoChartSelect() {
+        const records = loadEnsoRecords();
+        const seasons = [...new Set(records.map(r=>r.seasonKey))].sort();
+        const select = document.getElementById('ensoChartSeason');
+        const cur = select.value;
+        select.innerHTML = '<option value="">-- 请选择 --</option>'+seasons.map(s=>`<option value="${s}">${s}</option>`).join('');
+        if (seasons.includes(cur)) select.value = cur;
+        if (!cur && seasons.length) { select.value = seasons[0]; updateEnsoChart(); }
+    }
+    function updateEnsoChart() {
+        const seasonKey = document.getElementById('ensoChartSeason').value;
+        const canvas = document.getElementById('ensoChartCanvas');
+        const emptyEl = document.getElementById('ensoChartEmpty');
+        if (!seasonKey) { canvas.style.display='none'; emptyEl.style.display='block'; if(ensoChart){ensoChart.destroy();ensoChart=null;} return; }
+        const records = loadEnsoRecords().filter(r=>r.seasonKey===seasonKey).sort((a,b)=>a.updateDate.localeCompare(b.updateDate));
+        if (records.length===0) { canvas.style.display='none'; emptyEl.style.display='block'; if(ensoChart){ensoChart.destroy();ensoChart=null;} return; }
+        canvas.style.display='block'; emptyEl.style.display='none';
+        const ctx = canvas.getContext('2d');
+        if (ensoChart) ensoChart.destroy();
+        ensoChart = new Chart(ctx, {
+            type:'line',
+            data:{ labels:records.map(r=>r.updateDate), datasets:[
+                { label:'El Niño', data:records.map(r=>r.elNino), borderColor:'#c75b39', backgroundColor:'rgba(199,91,57,0.08)', borderWidth:2.5, tension:0.35, pointRadius:5, pointBackgroundColor:'#c75b39', pointBorderColor:'#fff', pointBorderWidth:2, fill:true },
+                { label:'Neutral', data:records.map(r=>r.neutral), borderColor:'#7a8b6f', backgroundColor:'rgba(122,139,111,0.06)', borderWidth:2.5, tension:0.35, pointRadius:5, pointBackgroundColor:'#7a8b6f', pointBorderColor:'#fff', pointBorderWidth:2, fill:true },
+                { label:'La Niña', data:records.map(r=>r.laNina), borderColor:'#3a7ca5', backgroundColor:'rgba(58,124,165,0.08)', borderWidth:2.5, tension:0.35, pointRadius:5, pointBackgroundColor:'#3a7ca5', pointBorderColor:'#fff', pointBorderWidth:2, fill:true }
+            ]},
+            options:{ responsive:true, maintainAspectRatio:false, plugins:{ title:{ display:true, text:'目标季节: '+seasonKey } }, scales:{ y:{ min:0,max:100,ticks:{callback:v=>v+'%'} }, x:{ title:{display:true,text:'更新日期'} } } }
+        });
+    }
+
+    // DWD 工具
+    function generateFutureDwdMonths(startDateStr) {
+        const startDate = startDateStr ? new Date(startDateStr+'T00:00:00') : new Date();
+        const months = [];
+        const baseMonth = startDate.getMonth();
+        const baseYear = startDate.getFullYear();
+        for (let i=1; i<=6; i++) {
+            const m = baseMonth + i;
+            const yr = baseYear + Math.floor(m/12);
+            const monthIdx = m % 12;
+            const monthLabels = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+            months.push({ key: yr+'-'+String(monthIdx+1).padStart(2,'0'), label: yr+'年'+monthLabels[monthIdx] });
+        }
+        return months;
+    }
+    window.generateDwdMonths = function() {
+        const dateInput = document.getElementById('dwdUpdateDate');
+        const dateStr = dateInput.value || new Date().toISOString().split('T')[0];
+        if (!dateInput.value) dateInput.value = dateStr;
+        const months = generateFutureDwdMonths(dateStr);
+        const tbody = document.getElementById('dwdBatchBody');
+        tbody.innerHTML = months.map(m => `
+            <tr><td><strong>${m.label}</strong></td>
+                <td><input type="number" min="0" max="100" step="0.1" class="dwd-temp-above" placeholder="0"></td>
+                <td><input type="number" min="0" max="100" step="0.1" class="dwd-temp-near" placeholder="0"></td>
+                <td><input type="number" min="0" max="100" step="0.1" class="dwd-temp-below" placeholder="0"></td>
+                <td><input type="number" min="0" max="100" step="0.1" class="dwd-precip-above" placeholder="0"></td>
+                <td><input type="number" min="0" max="100" step="0.1" class="dwd-precip-near" placeholder="0"></td>
+                <td><input type="number" min="0" max="100" step="0.1" class="dwd-precip-below" placeholder="0"></td>
+                <td><button class="btn-icon" onclick="this.closest('tr').remove()">✕</button></td></tr>`).join('');
+    };
+    window.addDwdRow = function() {
+        const tbody = document.getElementById('dwdBatchBody');
+        const row = document.createElement('tr');
+        row.innerHTML = `<td><input type="text" placeholder="如 2026-07" class="dwd-month-input"></td>
+            <td><input type="number" min="0" max="100" step="0.1" class="dwd-temp-above"></td>
+            <td><input type="number" min="0" max="100" step="0.1" class="dwd-temp-near"></td>
+            <td><input type="number" min="0" max="100" step="0.1" class="dwd-temp-below"></td>
+            <td><input type="number" min="0" max="100" step="0.1" class="dwd-precip-above"></td>
+            <td><input type="number" min="0" max="100" step="0.1" class="dwd-precip-near"></td>
+            <td><input type="number" min="0" max="100" step="0.1" class="dwd-precip-below"></td>
+            <td><button class="btn-icon" onclick="this.closest('tr').remove()">✕</button></td>`;
+        tbody.appendChild(row);
+    };
+    window.clearDwdBatch = function() { document.getElementById('dwdBatchBody').innerHTML = '<tr><td colspan="8">表格已清空</td></tr>'; };
+    window.saveDwdBatch = function() {
+        const updateDate = document.getElementById('dwdUpdateDate').value;
+        if (!updateDate) { showToast('⚠️ 请先选择更新日期','warning'); return; }
+        const rows = document.getElementById('dwdBatchBody').querySelectorAll('tr');
+        const records = loadDwdRecords();
+        let savedCount = 0;
+        rows.forEach(row => {
+            const monthInput = row.querySelector('.dwd-month-input');
+            let targetMonth = '';
+            if (monthInput && monthInput.value.trim()) targetMonth = monthInput.value.trim();
+            else { const firstCell = row.querySelector('td:first-child strong'); if (firstCell) { const m = firstCell.textContent.match(/(\d{4})年(\d{1,2})月/); if(m) targetMonth = m[1]+'-'+m[2].padStart(2,'0'); } }
+            if (!targetMonth) return;
+            const vals = ['.dwd-temp-above','.dwd-temp-near','.dwd-temp-below','.dwd-precip-above','.dwd-precip-near','.dwd-precip-below'].map(sel => parseFloat(row.querySelector(sel)?.value));
+            if (vals.some(isNaN)) return;
+            const record = { id: Date.now()+Math.random(), updateDate, targetMonth, tempAbove: Math.round(vals[0]*10)/10, tempNear: Math.round(vals[1]*10)/10, tempBelow: Math.round(vals[2]*10)/10, precipAbove: Math.round(vals[3]*10)/10, precipNear: Math.round(vals[4]*10)/10, precipBelow: Math.round(vals[5]*10)/10 };
+            const exists = records.findIndex(r => r.updateDate===updateDate && r.targetMonth===targetMonth);
+            if (exists>=0) records[exists] = record; else records.push(record);
+            savedCount++;
+        });
+        if (savedCount===0) { showToast('⚠️ 未找到有效数据','warning'); return; }
+        records.sort((a,b) => b.updateDate.localeCompare(a.updateDate) || a.targetMonth.localeCompare(b.targetMonth));
+        saveDwdRecords(records);
+        refreshDwdHistory();
+        updateDwdChartSelect();
+        updateDwdChart();
+        showToast('✅ 已保存 '+savedCount+' 条DWD记录','success');
+    };
+    function refreshDwdHistory() {
+        const records = loadDwdRecords();
+        document.getElementById('dwdRecordCount').textContent = '共 '+records.length+' 条';
+        const tbody = document.getElementById('dwdHistoryBody');
+        if (records.length===0) { tbody.innerHTML = '<tr><td colspan="9">暂无记录</td></tr>'; return; }
+        tbody.innerHTML = records.map(r => `<tr><td><strong>${r.updateDate}</strong></td><td>${r.targetMonth}</td><td class="prob-cell prob-high">${r.tempAbove.toFixed(1)}%</td><td class="prob-cell prob-mid">${r.tempNear.toFixed(1)}%</td><td class="prob-cell prob-low">${r.tempBelow.toFixed(1)}%</td><td style="color:#4a8c6f;">${r.precipAbove.toFixed(1)}%</td><td style="color:#7a8b6f;">${r.precipNear.toFixed(1)}%</td><td style="color:#b8943e;">${r.precipBelow.toFixed(1)}%</td><td><button class="btn btn-danger btn-xs" onclick="deleteDwdRecord('${r.id}')">✕</button></td></tr>`).join('');
+    }
+    window.deleteDwdRecord = function(id) {
+        let records = loadDwdRecords().filter(r => String(r.id)!==String(id));
+        saveDwdRecords(records);
+        refreshDwdHistory();
+        updateDwdChartSelect();
+        updateDwdChart();
+        showToast('已删除记录','warning');
+    };
+    window.clearAllDwd = function() {
+        if (confirm('清空所有DWD记录？')) { saveDwdRecords([]); refreshDwdHistory(); updateDwdChartSelect(); updateDwdChart(); showToast('已清空','warning'); }
+    };
+    let dwdChart = null;
+    function updateDwdChartSelect() {
+        const records = loadDwdRecords();
+        const months = [...new Set(records.map(r=>r.targetMonth))].sort();
+        const select = document.getElementById('dwdChartMonth');
+        const cur = select.value;
+        select.innerHTML = '<option value="">-- 请选择 --</option>'+months.map(m=>`<option value="${m}">${m}</option>`).join('');
+        if (months.includes(cur)) select.value = cur;
+        if (!cur && months.length) { select.value = months[0]; updateDwdChart(); }
+    }
+    function updateDwdChart() {
+        const targetMonth = document.getElementById('dwdChartMonth').value;
+        const chartType = document.getElementById('dwdChartType').value;
+        const canvas = document.getElementById('dwdChartCanvas');
+        const emptyEl = document.getElementById('dwdChartEmpty');
+        if (!targetMonth) { canvas.style.display='none'; emptyEl.style.display='block'; if(dwdChart){dwdChart.destroy();dwdChart=null;} return; }
+        const records = loadDwdRecords().filter(r=>r.targetMonth===targetMonth).sort((a,b)=>a.updateDate.localeCompare(b.updateDate));
+        if (records.length===0) { canvas.style.display='none'; emptyEl.style.display='block'; if(dwdChart){dwdChart.destroy();dwdChart=null;} return; }
+        canvas.style.display='block'; emptyEl.style.display='none';
+        const ctx = canvas.getContext('2d');
+        if (dwdChart) dwdChart.destroy();
+        let datasets = [];
+        if (chartType==='temp') datasets = [
+            { label:'温度偏高', data:records.map(r=>r.tempAbove), borderColor:'#c75b39', backgroundColor:'rgba(199,91,57,0.08)', borderWidth:2.5, tension:0.35, pointRadius:5, fill:true },
+            { label:'温度接近', data:records.map(r=>r.tempNear), borderColor:'#7a8b6f', backgroundColor:'rgba(122,139,111,0.06)', borderWidth:2.5, tension:0.35, pointRadius:5, fill:true },
+            { label:'温度偏低', data:records.map(r=>r.tempBelow), borderColor:'#3a7ca5', backgroundColor:'rgba(58,124,165,0.08)', borderWidth:2.5, tension:0.35, pointRadius:5, fill:true }
+        ];
+        else datasets = [
+            { label:'降水偏多', data:records.map(r=>r.precipAbove), borderColor:'#4a8c6f', backgroundColor:'rgba(74,140,111,0.08)', borderWidth:2.5, tension:0.35, pointRadius:5, fill:true },
+            { label:'降水接近', data:records.map(r=>r.precipNear), borderColor:'#7a8b6f', backgroundColor:'rgba(122,139,111,0.06)', borderWidth:2.5, tension:0.35, pointRadius:5, fill:true },
+            { label:'降水偏少', data:records.map(r=>r.precipBelow), borderColor:'#b8943e', backgroundColor:'rgba(184,148,62,0.08)', borderWidth:2.5, tension:0.35, pointRadius:5, fill:true }
+        ];
+        dwdChart = new Chart(ctx, { type:'line', data:{ labels:records.map(r=>r.updateDate), datasets }, options:{ responsive:true, maintainAspectRatio:false, plugins:{ title:{ display:true, text:'目标月份: '+targetMonth } }, scales:{ y:{ min:0,max:100,ticks:{callback:v=>v+'%'} }, x:{ title:{display:true,text:'更新日期'} } } } });
+    }
+
+    // 新闻功能
+    function refreshNewsList() {
+        const news = loadNews();
+        document.getElementById('newsCount').textContent = '共 '+news.length+' 条';
+        const container = document.getElementById('newsListContainer');
+        if (news.length===0) { container.innerHTML = '<div class="empty-state"><span class="big-icon">📭</span><p>暂无新闻</p></div>'; return; }
+        news.sort((a,b)=>b.date.localeCompare(a.date));
+        container.innerHTML = news.map(item => `
+            <div class="news-item">
+                <div class="news-title">${escapeHtml(item.title)}</div>
+                <div class="news-meta"><span>📅 ${item.date||'无日期'}</span><span>📰 ${escapeHtml(item.source||'未知')}</span><span>🏷️ ${escapeHtml(item.keywords||'')}</span></div>
+                ${item.summary?`<div class="news-summary">${escapeHtml(item.summary)}</div>`:''}
+                ${item.link?`<a href="${item.link}" target="_blank" class="news-link">🔗 阅读原文</a>`:''}
+                <div class="news-actions"><button class="btn btn-danger btn-xs" onclick="deleteNewsItem('${item.id}')">✕ 删除</button></div>
+            </div>`).join('');
+    }
+    window.addNewsItem = function() {
+        const title = document.getElementById('newsTitle').value.trim();
+        if (!title) { showToast('⚠️ 请输入新闻标题','warning'); return; }
+        const news = loadNews();
+        news.push({
+            id: Date.now()+Math.random(),
+            date: document.getElementById('newsDate').value || new Date().toISOString().split('T')[0],
+            source: document.getElementById('newsSource').value.trim(),
+            keywords: document.getElementById('newsKeywords').value.trim(),
+            title: title,
+            summary: document.getElementById('newsSummary').value.trim(),
+            link: document.getElementById('newsLink').value.trim()
+        });
+        saveNews(news);
+        refreshNewsList();
+        clearNewsForm();
+        showToast('✅ 新闻已添加','success');
+    };
+    window.clearNewsForm = function() {
+        ['newsDate','newsSource','newsKeywords','newsTitle','newsSummary','newsLink'].forEach(id => document.getElementById(id).value = '');
+        document.getElementById('newsDate').value = new Date().toISOString().split('T')[0];
+    };
+    window.deleteNewsItem = function(id) {
+        let news = loadNews().filter(item => String(item.id)!==String(id));
+        saveNews(news);
+        refreshNewsList();
+        showToast('已删除新闻','warning');
+    };
+    window.clearAllNews = function() {
+        if (confirm('清空所有新闻？')) { saveNews([]); refreshNewsList(); showToast('已清空','warning'); }
+    };
+    window.exportNewsJSON = function() {
+        const news = loadNews();
+        const blob = new Blob([JSON.stringify(news,null,2)], {type:'application/json'});
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'climate-news-'+new Date().toISOString().split('T')[0]+'.json';
+        a.click();
+        showToast('📥 新闻已导出','success');
+    };
+    window.handleNewsImport = function(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const data = JSON.parse(e.target.result);
+                if (!Array.isArray(data)) throw new Error('格式错误');
+                const news = loadNews();
+                const merged = [...news];
+                data.filter(item=>item.title).forEach(item => {
+                    if (!item.id) item.id = Date.now()+Math.random();
+                    const idx = merged.findIndex(m=>m.id===item.id);
+                    if (idx>=0) merged[idx] = item; else merged.push(item);
+                });
+                saveNews(merged);
+                refreshNewsList();
+                showToast(`📤 成功导入 ${data.length} 条新闻`,'success');
+            } catch (err) { showToast('❌ 文件格式错误','warning'); }
+        };
+        reader.readAsText(file);
+        event.target.value = '';
+    };
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // 全量导出/导入/重置
+    window.exportAllData = function() {
+        const data = { exportDate: new Date().toISOString(), ensoRecords: loadEnsoRecords(), dwdRecords: loadDwdRecords(), news: loadNews() };
+        const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'climate-tracker-full-'+new Date().toISOString().split('T')[0]+'.json';
+        a.click();
+        showToast('📥 全部数据已导出','success');
+    };
+    window.importAllData = function(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const data = JSON.parse(e.target.result);
+                if (data.ensoRecords) saveEnsoRecords(data.ensoRecords);
+                if (data.dwdRecords) saveDwdRecords(data.dwdRecords);
+                if (data.news) saveNews(data.news);
+                refreshEnsoHistory(); refreshDwdHistory(); refreshNewsList();
+                updateEnsoChartSelect(); updateEnsoChart();
+                updateDwdChartSelect(); updateDwdChart();
+                updateStorageInfo();
+                showToast('📤 全部数据已导入','success');
+            } catch (err) { showToast('❌ 文件格式错误','warning'); }
+        };
+        reader.readAsText(file);
+        event.target.value = '';
+    };
+    window.resetAllData = function() {
+        if (confirm('⚠️ 确定清除全部数据？建议先导出备份。')) {
+            saveEnsoRecords([]); saveDwdRecords([]); saveNews([]);
+            refreshEnsoHistory(); refreshDwdHistory(); refreshNewsList();
+            updateEnsoChartSelect(); updateEnsoChart();
+            updateDwdChartSelect(); updateDwdChart();
+            updateStorageInfo();
+            showToast('已清除全部数据','warning');
+        }
+    };
+    function updateStorageInfo() {
+        const enso = loadEnsoRecords(), dwd = loadDwdRecords(), news = loadNews();
+        const size = new Blob([JSON.stringify({enso,dwd,news})]).size;
+        const sizeStr = size<1024?size+' B':size<1048576?(size/1024).toFixed(1)+' KB':(size/1048576).toFixed(2)+' MB';
+        document.getElementById('storageInfo').innerHTML = `📊 ENSO: ${enso.length} | DWD: ${dwd.length} | 新闻: ${news.length} | 💾 约 ${sizeStr}`;
+    }
+
+    // 初始化
+    function init() {
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('ensoUpdateDate').value = today;
+        document.getElementById('dwdUpdateDate').value = today;
+        document.getElementById('newsDate').value = today;
+        refreshEnsoHistory(); refreshDwdHistory(); refreshNewsList();
+        updateEnsoChartSelect(); updateEnsoChart();
+        updateDwdChartSelect(); updateDwdChart();
+        updateStorageInfo();
+        window.generateEnsoSeasons();
+        window.generateDwdMonths();
+    }
+    init();
+})();
+</script>
+</body>
+</html>
